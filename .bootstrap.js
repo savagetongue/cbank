@@ -79,7 +79,8 @@ function updateWranglerJsonc() {
 function runSetupCommands() {
     const commands = [
     "bun add @supabase/supabase-js@^2.43.0",
-    "bun install @hono/zod-validator"
+    "bun install @hono/zod-validator",
+    "bun add hono"
 ];
     
     if (commands.length === 0) {
