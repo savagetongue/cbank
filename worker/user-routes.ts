@@ -17,7 +17,7 @@ interface Env extends CoreEnv {
   CRON_SECRET: string;
 }
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
-  const apiApp = new Hono<{ Bindings: Env }>();
+  const apiApp = app.basePath('/api');
 
   // Mount auth routes
   apiApp.route('/auth', authApp);
@@ -211,6 +211,4 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { message: 'Idempotency key cleanup completed.', deleted_count: data?.deleted_count });
   });
   apiApp.route('/cron', cronApp);
-
-  app.route('/api', apiApp);
 }
