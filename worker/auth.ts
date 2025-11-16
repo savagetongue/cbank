@@ -5,19 +5,14 @@ import { getSupabaseClients } from './supabase';
 import { registerSchema, loginSchema } from './schemas';
 import { bad, ok } from './core-utils';
 import type { JWTPayload } from '@shared/types';
-import type { Env as HonoEnv } from 'hono';
-// Use a generic Env interface that aligns with Hono's context bindings
-// This ensures c.env has the expected properties like JWT_SECRET
-interface Env extends HonoEnv {
-  [key: string]: unknown;
-}
 const authApp = new Hono<{ Bindings: Env }>();
+// Registration Endpoint
 authApp.post('/register', zValidator('json', registerSchema), async (c) => {
   const { email, password } = c.req.valid('json');
   const { supabaseAdmin } = getSupabaseClients(c);
   const { data, error } = await supabaseAdmin.auth.signUp({
     email,
-    password
+    password,
   });
   if (error) {
     return bad(c, error.message);
@@ -27,6 +22,7 @@ authApp.post('/register', zValidator('json', registerSchema), async (c) => {
   }
   return ok(c, { message: 'Registration successful. Please check your email to verify.' });
 });
+// Login Endpoint
 authApp.post('/login', zValidator('json', loginSchema), async (c) => {
   const { email, password } = c.req.valid('json');
   const { supabasePublic } = getSupabaseClients(c);
@@ -37,7 +33,7 @@ authApp.post('/login', zValidator('json', loginSchema), async (c) => {
   }
   const { data, error } = await supabasePublic.auth.signInWithPassword({
     email,
-    password
+    password,
   });
   if (error) {
     return c.json({ success: false, error: error.message }, 401);
@@ -48,18 +44,19 @@ authApp.post('/login', zValidator('json', loginSchema), async (c) => {
   const payload: JWTPayload = {
     sub: data.user.id,
     role: data.user.role || 'authenticated',
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // 24 hours
   };
   const token = await sign(payload, jwtSecret);
   return ok(c, {
     accessToken: token,
-    user: { id: data.user.id, email: data.user.email }
+    user: { id: data.user.id, email: data.user.email },
   });
 });
+// JWT Middleware for protected routes
 export const authMiddleware = () => {
-  return async (c: any, next: () => Promise<void>) => {
+  return async (c: any, next: any) => {
     const jwtMiddleware = jwt({
-      secret: c.env.JWT_SECRET as string,
+      secret: c.env.JWT_SECRET,
     });
     return jwtMiddleware(c, next);
   };
