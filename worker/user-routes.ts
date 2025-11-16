@@ -17,26 +17,28 @@ interface Env extends CoreEnv {
   CRON_SECRET: string;
 }
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
+  const apiApp = new Hono<{ Bindings: Env }>();
+
   // Mount auth routes
-  app.route('/auth', authApp);
+  apiApp.route('/auth', authApp);
   // Apply auth middleware to all subsequent routes in this file
-  app.use('/member/*', authMiddleware());
-  app.use('/offers/*', authMiddleware());
-  app.use('/offers-create', authMiddleware());
-  app.use('/requests', authMiddleware());
-  app.use('/requests/*', authMiddleware());
-  app.use('/request-accept', authMiddleware());
-  app.use('/escrow/*', authMiddleware());
-  app.use('/admin/*', authMiddleware());
+  apiApp.use('/member/*', authMiddleware());
+  apiApp.use('/offers/*', authMiddleware());
+  apiApp.use('/offers-create', authMiddleware());
+  apiApp.use('/requests', authMiddleware());
+  apiApp.use('/requests/*', authMiddleware());
+  apiApp.use('/request-accept', authMiddleware());
+  apiApp.use('/escrow/*', authMiddleware());
+  apiApp.use('/admin/*', authMiddleware());
   // --- Member Routes ---
-  app.get('/member/profile', async (c) => {
+  apiApp.get('/member/profile', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.from('members').select('*').eq('id', payload.sub).single();
     if (error) return notFound(c, 'Member profile not found.');
     return ok(c, data);
   });
-  app.post('/member', zValidator('json', s.createMemberSchema), async (c) => {
+  apiApp.post('/member', zValidator('json', s.createMemberSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { name, contact } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
@@ -53,20 +55,20 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, data);
   });
   // --- Offer Routes ---
-  app.get('/offers', async (c) => {
+  apiApp.get('/offers', async (c) => {
     const { supabasePublic } = getSupabaseClients(c);
     const { data, error } = await supabasePublic.from('offers').select('*').eq('is_active', true);
     if (error) return bad(c, error.message);
     return ok(c, data);
   });
-  app.get('/offers/my', async (c) => {
+  apiApp.get('/offers/my', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.from('offers').select('*').eq('provider_member_id', payload.sub);
     if (error) return bad(c, error.message);
     return ok(c, data);
   });
-  app.post('/offers-create', zValidator('json', s.createOfferSchema), async (c) => {
+  apiApp.post('/offers-create', zValidator('json', s.createOfferSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const offerData = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
@@ -79,21 +81,21 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, data);
   });
   // --- Request Routes ---
-  app.get('/requests', async (c) => {
+  apiApp.get('/requests', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.from('requests').select('*, offers(title)').eq('member_id', payload.sub);
     if (error) return bad(c, error.message);
     return ok(c, data);
   });
-  app.get('/requests/incoming', async (c) => {
+  apiApp.get('/requests/incoming', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.rpc('get_incoming_requests_for_member', { p_member_id: payload.sub });
     if (error) return bad(c, `RPC Error: ${error.message}`);
     return ok(c, data);
   });
-  app.post('/requests', zValidator('json', s.createRequestSchema), async (c) => {
+  apiApp.post('/requests', zValidator('json', s.createRequestSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { offer_id } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
@@ -114,7 +116,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (error) return bad(c, `Failed to create request: ${error.message}`);
     return ok(c, data);
   });
-  app.post('/request-accept', zValidator('json', s.acceptRequestSchema), async (c) => {
+  apiApp.post('/request-accept', zValidator('json', s.acceptRequestSchema), async (c) => {
     const { request_id, idempotency_key } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.rpc('accept_request_rpc', {
@@ -126,7 +128,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { escrow_id: data.escrow_id });
   });
   // --- Escrow Routes ---
-  app.post('/escrow/confirm', zValidator('json', s.confirmEscrowSchema), async (c) => {
+  apiApp.post('/escrow/confirm', zValidator('json', s.confirmEscrowSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { escrow_id, idempotency_key } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
@@ -138,7 +140,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (error) return bad(c, `RPC Error: ${error.message}`);
     return ok(c, { success: data?.ok, released: data?.released, escrow_id: data?.escrow_id });
   });
-  app.post('/escrow/dispute', zValidator('json', s.disputeEscrowSchema), async (c) => {
+  apiApp.post('/escrow/dispute', zValidator('json', s.disputeEscrowSchema), async (c) => {
     const { escrow_id, reason } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.rpc('open_dispute_rpc', {
@@ -149,7 +151,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { dispute_id: data?.dispute_id });
   });
   // --- Admin Routes ---
-  app.get('/admin/disputes/open', async (c) => {
+  apiApp.get('/admin/disputes/open', async (c) => {
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin
       .from('disputes')
@@ -167,7 +169,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (error) return bad(c, `Failed to fetch open disputes: ${error.message}`);
     return ok(c, data);
   });
-  app.post('/admin/disputes/resolve', zValidator('json', s.resolveDisputeSchema), async (c) => {
+  apiApp.post('/admin/disputes/resolve', zValidator('json', s.resolveDisputeSchema), async (c) => {
     const { escrow_id, admin_decision, offer_share, idempotency_key } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin.rpc('resolve_dispute_rpc', {
@@ -208,5 +210,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (error) return bad(c, `RPC Error: ${error.message}`);
     return ok(c, { message: 'Idempotency key cleanup completed.', deleted_count: data?.deleted_count });
   });
-  app.route('/cron', cronApp);
+  apiApp.route('/cron', cronApp);
+
+  app.route('/api', apiApp);
 }
