@@ -15,6 +15,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { CreateOfferPage } from '@/pages/CreateOfferPage';
+import { OfferDetailsPage } from '@/pages/OfferDetailsPage';
 const router = createBrowserRouter([
   {
     path: "/",
@@ -30,6 +31,15 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <CreateOfferPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/offer/:offerId",
+    element: (
+      <ProtectedRoute>
+        <OfferDetailsPage />
       </ProtectedRoute>
     ),
     errorElement: <RouteErrorBoundary />,

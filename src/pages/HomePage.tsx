@@ -60,9 +60,9 @@ export function HomePage() {
           ) : offers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {offers.map((offer) => (
-                <Card key={offer.id} className="flex flex-col hover:shadow-lg transition-shadow duration-200">
+                <Card key={offer.id} className="flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out">
                   <CardHeader>
-                    <CardTitle>{offer.title}</CardTitle>
+                    <CardTitle className="line-clamp-2">{offer.title}</CardTitle>
                     <CardDescription className="flex items-center pt-1">
                       <Clock className="mr-2 h-4 w-4" />
                       {offer.price_credits} Credits
@@ -72,7 +72,9 @@ export function HomePage() {
                     <p className="text-sm text-muted-foreground line-clamp-3">{offer.description}</p>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full">View & Request</Button>
+                    <Button className="w-full" onClick={() => navigate(`/offer/${offer.id}`)}>
+                      View & Request
+                    </Button>
                   </CardFooter>
                 </Card>
               ))}
