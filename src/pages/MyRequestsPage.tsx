@@ -5,10 +5,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { api } from '@/lib/api-client';
 import type { ServiceRequest } from '@shared/types';
-import { Clock, CheckCircle } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +30,8 @@ export function MyRequestsPage() {
   const [requests, setRequests] = useState<ServiceRequestWithOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState<string | null>(null);
+  const [isDisputing, setIsDisputing] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
   const navigate = useNavigate();
   useEffect(() => {
     fetchRequests();
@@ -66,14 +71,44 @@ export function MyRequestsPage() {
       setIsConfirming(null);
     }
   };
+  const handleOpenDispute = async (escrowId: string, requestId: string) => {
+    if (!disputeReason.trim() || disputeReason.length < 10) {
+      toast.error('Please provide a reason for the dispute (minimum 10 characters).');
+      return;
+    }
+    setIsDisputing(requestId);
+    try {
+      await api('/api/escrow/dispute', {
+        method: 'POST',
+        body: JSON.stringify({
+          escrow_id: escrowId,
+          reason: disputeReason,
+        }),
+      });
+      toast.success('Dispute opened successfully.', {
+        description: 'An administrator will review the case. We will notify you of any updates.',
+      });
+      setRequests(prev =>
+        prev.map(req => req.id === requestId ? { ...req, status: 'disputed' } : req)
+      );
+      setDisputeReason('');
+      // Find the close button and click it programmatically
+      document.getElementById(`close-dispute-dialog-${requestId}`)?.click();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      toast.error(`Failed to open dispute: ${errorMessage}`);
+    } finally {
+      setIsDisputing(null);
+    }
+  };
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'accepted':
-        return 'default';
       case 'completed':
         return 'default';
       case 'pending':
         return 'secondary';
+      case 'disputed':
       case 'rejected':
       case 'cancelled':
         return 'destructive';
@@ -91,7 +126,7 @@ export function MyRequestsPage() {
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
             </div>
           ) : requests.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -112,7 +147,7 @@ export function MyRequestsPage() {
                     <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
                   </CardContent>
                   {request.status === 'accepted' && request.escrow_id && (
-                    <CardFooter>
+                    <CardFooter className="flex flex-col sm:flex-row gap-2">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button className="w-full btn-brand" disabled={isConfirming === request.id}>
@@ -135,6 +170,49 @@ export function MyRequestsPage() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="destructive" className="w-full">
+                            <AlertTriangle className="mr-2 h-4 w-4" />
+                            Open Dispute
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Open a Dispute</DialogTitle>
+                            <DialogDescription>
+                              If you have an issue with the service provided, please explain the situation below. An admin will review your case.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="dispute-reason">Reason for Dispute</Label>
+                              <Textarea
+                                id="dispute-reason"
+                                placeholder="Please describe the issue in detail (min 10 characters)..."
+                                className="min-h-[100px]"
+                                value={disputeReason}
+                                onChange={(e) => setDisputeReason(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button type="button" variant="secondary" id={`close-dispute-dialog-${request.id}`}>
+                                Cancel
+                              </Button>
+                            </DialogClose>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              onClick={() => handleOpenDispute(request.escrow_id!, request.id)}
+                              disabled={isDisputing === request.id}
+                            >
+                              {isDisputing === request.id ? 'Submitting...' : 'Submit Dispute'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </CardFooter>
                   )}
                 </Card>

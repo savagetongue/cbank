@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Banknote, User, Settings, Handshake, Package, Send } from "lucide-react";
+import { User, Settings, Handshake, Package, Send } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,10 +17,7 @@ export function AppSidebar(): JSX.Element {
     <Sidebar>
       <SidebarHeader>
         <Link to="/" className="flex items-center gap-2 px-2 py-1">
-          <div className="h-8 w-8 rounded-md bg-[hsl(var(--brand-primary))] flex items-center justify-center">
-            <Banknote className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-lg font-semibold text-primary">ChronoBank</span>
+          <span className="text-xl font-semibold text-primary">ChronoBank</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -53,9 +50,7 @@ export function AppSidebar(): JSX.Element {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <div className="px-2 text-xs text-muted-foreground">
-          Built with ��️ at Cloudflare
-        </div>
+        {/* Footer content removed as per client request */}
       </SidebarFooter>
     </Sidebar>
   );
