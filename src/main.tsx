@@ -14,12 +14,22 @@ import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { CreateOfferPage } from '@/pages/CreateOfferPage';
 const router = createBrowserRouter([
   {
     path: "/",
     element: (
       <ProtectedRoute>
         <HomePage />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/create-offer",
+    element: (
+      <ProtectedRoute>
+        <CreateOfferPage />
       </ProtectedRoute>
     ),
     errorElement: <RouteErrorBoundary />,

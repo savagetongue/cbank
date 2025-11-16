@@ -7,9 +7,11 @@ import { Toaster, toast } from '@/components/ui/sonner';
 import { api } from '@/lib/api-client';
 import type { ServiceOffer } from '@shared/types';
 import { PlusCircle, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 export function HomePage() {
   const [offers, setOffers] = useState<ServiceOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchOffers = async () => {
       try {
@@ -34,7 +36,7 @@ export function HomePage() {
               <h1 className="text-3xl font-bold text-foreground">Service Offers</h1>
               <p className="text-muted-foreground">Browse and request services from the community.</p>
             </div>
-            <Button>
+            <Button onClick={() => navigate('/create-offer')}>
               <PlusCircle className="mr-2 h-4 w-4" /> Create Offer
             </Button>
           </div>
@@ -61,13 +63,13 @@ export function HomePage() {
                 <Card key={offer.id} className="flex flex-col hover:shadow-lg transition-shadow duration-200">
                   <CardHeader>
                     <CardTitle>{offer.title}</CardTitle>
-                    <CardDescription className="flex items-center">
+                    <CardDescription className="flex items-center pt-1">
                       <Clock className="mr-2 h-4 w-4" />
                       {offer.price_credits} Credits
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground">{offer.description}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{offer.description}</p>
                   </CardContent>
                   <CardFooter>
                     <Button className="w-full">View & Request</Button>
@@ -79,6 +81,9 @@ export function HomePage() {
             <div className="text-center py-16 border-2 border-dashed rounded-lg">
               <h2 className="text-xl font-semibold">No Offers Available</h2>
               <p className="text-muted-foreground mt-2">Check back later or be the first to create one!</p>
+              <Button onClick={() => navigate('/create-offer')} className="mt-4">
+                <PlusCircle className="mr-2 h-4 w-4" /> Create First Offer
+              </Button>
             </div>
           )}
         </div>
