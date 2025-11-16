@@ -18,6 +18,7 @@ import { CreateOfferPage } from '@/pages/CreateOfferPage';
 import { OfferDetailsPage } from '@/pages/OfferDetailsPage';
 import { MyOffersPage } from '@/pages/MyOffersPage';
 import { MyRequestsPage } from '@/pages/MyRequestsPage';
+import { MyProfilePage } from '@/pages/MyProfilePage';
 const router = createBrowserRouter([
   {
     path: "/",
@@ -60,6 +61,15 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <MyRequestsPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/profile",
+    element: (
+      <ProtectedRoute>
+        <MyProfilePage />
       </ProtectedRoute>
     ),
     errorElement: <RouteErrorBoundary />,

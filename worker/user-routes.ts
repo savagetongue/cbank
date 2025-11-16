@@ -29,6 +29,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.use('/escrow/*', authMiddleware());
   app.use('/admin/*', authMiddleware());
   // --- Member Routes ---
+  app.get('/member/profile', async (c) => {
+    const payload = c.get('jwtPayload') as JWTPayload;
+    const { supabaseAdmin } = getSupabaseClients(c);
+    const { data, error } = await supabaseAdmin.from('members').select('*').eq('id', payload.sub).single();
+    if (error) return notFound(c, 'Member profile not found.');
+    return ok(c, data);
+  });
   app.post('/member', zValidator('json', s.createMemberSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { name, contact } = c.req.valid('json');

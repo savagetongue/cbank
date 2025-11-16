@@ -42,7 +42,7 @@ export function AppSidebar(): JSX.Element {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive('/profile')}>
-              <a href="#"><User /> <span>My Profile</span></a>
+              <Link to="/profile"><User /> <span>My Profile</span></Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

@@ -10,30 +10,66 @@ import { PlusCircle, Inbox, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 export function MyOffersPage() {
   const [myOffers, setMyOffers] = useState<ServiceOffer[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<ServiceRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const navigate = useNavigate();
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [offersData, requestsData] = await Promise.all([
+        api<ServiceOffer[]>('/api/offers/my'),
+        api<ServiceRequest[]>('/api/requests/incoming'),
+      ]);
+      setMyOffers(offersData);
+      setIncomingRequests(requestsData);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data.';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const [offersData, requestsData] = await Promise.all([
-          api<ServiceOffer[]>('/api/offers/my'),
-          api<ServiceRequest[]>('/api/requests/incoming'),
-        ]);
-        setMyOffers(offersData);
-        setIncomingRequests(requestsData);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data.';
-        toast.error(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
   }, []);
+  const handleAcceptRequest = async (requestId: string) => {
+    setIsAccepting(requestId);
+    try {
+      await api('/api/request-accept', {
+        method: 'POST',
+        body: JSON.stringify({
+          request_id: requestId,
+          idempotency_key: crypto.randomUUID(),
+        }),
+      });
+      toast.success('Request accepted!', {
+        description: 'Credits are now held in escrow until the service is confirmed complete.',
+      });
+      // Optimistically update UI or refetch
+      setIncomingRequests(prev =>
+        prev.map(req => req.id === requestId ? { ...req, status: 'accepted' } : req)
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      toast.error(`Failed to accept request: ${errorMessage}`);
+    } finally {
+      setIsAccepting(null);
+    }
+  };
   const getRequestsForOffer = (offerId: string) => {
     return incomingRequests.filter(req => req.offer_id === offerId);
   };
@@ -89,7 +125,29 @@ export function MyOffersPage() {
                                       <p className="text-sm font-medium">Request from: {req.member_id.substring(0, 8)}...</p>
                                       <p className="text-xs text-muted-foreground">Status: <span className="capitalize">{req.status}</span></p>
                                     </div>
-                                    {req.status === 'pending' && <Button size="sm" className="btn-brand">Accept</Button>}
+                                    {req.status === 'pending' && (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button size="sm" className="btn-brand" disabled={isAccepting === req.id}>
+                                            {isAccepting === req.id ? 'Accepting...' : 'Accept'}
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Accept Service Request?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Accepting this request will deduct {offer.price_credits} credits from the requester and hold them in escrow. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleAcceptRequest(req.id)} className="btn-brand">
+                                              Confirm & Accept
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    )}
                                   </li>
                                 ))}
                               </ul>

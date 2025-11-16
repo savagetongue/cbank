@@ -1,37 +1,71 @@
 import { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { api } from '@/lib/api-client';
 import type { ServiceRequest } from '@shared/types';
-import { Clock } from 'lucide-react';
+import { Clock, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-// Extend the type to include the nested offer title
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 type ServiceRequestWithOffer = ServiceRequest & {
   offers: { title: string } | null;
 };
 export function MyRequestsPage() {
   const [requests, setRequests] = useState<ServiceRequestWithOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConfirming, setIsConfirming] = useState<string | null>(null);
   const navigate = useNavigate();
   useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        setIsLoading(true);
-        const data = await api<ServiceRequestWithOffer[]>('/api/requests');
-        setRequests(data);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to fetch your requests.';
-        toast.error(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchRequests();
   }, []);
+  const fetchRequests = async () => {
+    try {
+      setIsLoading(true);
+      const data = await api<ServiceRequestWithOffer[]>('/api/requests');
+      setRequests(data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch your requests.';
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleConfirmCompletion = async (escrowId: string, requestId: string) => {
+    setIsConfirming(requestId);
+    try {
+      await api('/api/escrow/confirm', {
+        method: 'POST',
+        body: JSON.stringify({
+          escrow_id: escrowId,
+          idempotency_key: crypto.randomUUID(),
+        }),
+      });
+      toast.success('Service completion confirmed!', {
+        description: 'Credits have been released to the provider. Thank you!',
+      });
+      setRequests(prev =>
+        prev.map(req => req.id === requestId ? { ...req, status: 'completed' } : req)
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      toast.error(`Confirmation failed: ${errorMessage}`);
+    } finally {
+      setIsConfirming(null);
+    }
+  };
   const getStatusVariant = (status: string) => {
     switch (status) {
       case 'accepted':
@@ -57,12 +91,12 @@ export function MyRequestsPage() {
           </div>
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
             </div>
           ) : requests.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {requests.map((request) => (
-                <Card key={request.id} className="shadow-md border-accent/20">
+                <Card key={request.id} className="shadow-md border-accent/20 flex flex-col">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-xl text-primary line-clamp-1">{request.offers?.title || request.title}</CardTitle>
@@ -74,9 +108,35 @@ export function MyRequestsPage() {
                       <Clock className="mr-2 h-4 w-4" /> {request.price_credits} Credits
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-grow">
                     <p className="text-sm text-muted-foreground line-clamp-2">{request.description}</p>
                   </CardContent>
+                  {request.status === 'accepted' && request.escrow_id && (
+                    <CardFooter>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button className="w-full btn-brand" disabled={isConfirming === request.id}>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            {isConfirming === request.id ? 'Confirming...' : 'Confirm Completion'}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirm Service Completion?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will release the {request.price_credits} credits from escrow to the service provider. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleConfirmCompletion(request.escrow_id!, request.id)} className="btn-brand">
+                              Confirm & Release Credits
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </CardFooter>
+                  )}
                 </Card>
               ))}
             </div>

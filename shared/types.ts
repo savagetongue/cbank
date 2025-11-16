@@ -41,6 +41,7 @@ export interface ServiceRequest {
   description: string;
   price_credits: number;
   status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled';
+  escrow_id: string | null; // Added to track the associated escrow
   created_at: string;
   updated_at: string;
 }
