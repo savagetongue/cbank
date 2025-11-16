@@ -3,6 +3,8 @@ import { z } from 'zod';
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
+  name: z.string().min(3).max(50),
+  contact: z.string().optional(),
 });
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -10,15 +12,14 @@ export const loginSchema = z.object({
 });
 // Member Schema
 export const createMemberSchema = z.object({
-  username: z.string().min(3).max(50),
-  bio: z.string().max(500).optional(),
+  name: z.string().min(3).max(50),
+  contact: z.string().max(100).optional(),
 });
 // Offer Schema
 export const createOfferSchema = z.object({
   title: z.string().min(5).max(100),
   description: z.string().min(10).max(1000),
-  category: z.string(),
-  credits_required: z.number().int().positive(),
+  price_credits: z.number().int().positive(),
 });
 // Request Schema
 export const acceptRequestSchema = z.object({

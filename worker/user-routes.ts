@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import type { Env } from './core-utils';
+import type { Env as CoreEnv } from './core-utils';
 import { ok, bad, notFound } from './core-utils';
 import { getSupabaseClients } from './supabase';
 import { authMiddleware } from './auth';
@@ -8,6 +8,14 @@ import authApp from './auth';
 import * as s from './schemas';
 import type { JWTPayload } from '@shared/types';
 import type { MiddlewareHandler } from 'hono';
+// Define a more specific Env type for this worker to include secrets
+interface Env extends CoreEnv {
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
+  JWT_SECRET: string;
+  CRON_SECRET: string;
+}
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // Mount auth routes
   app.route('/auth', authApp);
@@ -21,11 +29,15 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // --- Member Routes ---
   app.post('/member', zValidator('json', s.createMemberSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
-    const { username, bio } = c.req.valid('json');
+    const { name, contact } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
+    const { data: user, error: userError } = await supabaseAdmin.auth.admin.getUserById(payload.sub);
+    if (userError || !user) {
+        return bad(c, `Failed to retrieve user details: ${userError?.message}`);
+    }
     const { data, error } = await supabaseAdmin
       .from('members')
-      .insert({ id: payload.sub, username, bio })
+      .insert({ id: payload.sub, name, contact, email: user.user.email })
       .select()
       .single();
     if (error) return bad(c, `Failed to create member profile: ${error.message}`);
@@ -44,7 +56,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { supabaseAdmin } = getSupabaseClients(c);
     const { data, error } = await supabaseAdmin
       .from('offers')
-      .insert({ ...offerData, provider_id: payload.sub })
+      .insert({ ...offerData, provider_member_id: payload.sub })
       .select()
       .single();
     if (error) return bad(c, `Failed to create offer: ${error.message}`);
@@ -54,8 +66,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/requests', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { supabaseAdmin } = getSupabaseClients(c);
-    // Example: Get requests made by the user
-    const { data, error } = await supabaseAdmin.from('requests').select('*').eq('requester_id', payload.sub);
+    const { data, error } = await supabaseAdmin.from('requests').select('*').eq('member_id', payload.sub);
     if (error) return bad(c, error.message);
     return ok(c, data);
   });
@@ -67,8 +78,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       p_idempotency_key: idempotency_key,
     });
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    if (!data) return notFound(c, 'Accepting request failed or already processed.');
-    return ok(c, { escrow_id: data });
+    if (!data || !data.ok) return notFound(c, data?.message || 'Accepting request failed or already processed.');
+    return ok(c, { escrow_id: data.escrow_id });
   });
   // --- Escrow Routes ---
   app.post('/escrow/confirm', zValidator('json', s.confirmEscrowSchema), async (c) => {
@@ -81,7 +92,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       p_idempotency_key: idempotency_key,
     });
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    return ok(c, { success: data });
+    return ok(c, { success: data?.ok, released: data?.released, escrow_id: data?.escrow_id });
   });
   app.post('/escrow/dispute', zValidator('json', s.disputeEscrowSchema), async (c) => {
     const { escrow_id, reason } = c.req.valid('json');
@@ -91,10 +102,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       p_reason: reason,
     });
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    return ok(c, { dispute_id: data });
+    return ok(c, { dispute_id: data?.dispute_id });
   });
   // --- Admin Routes ---
-  // Note: In a real app, you'd add another middleware to check for an 'admin' role in the JWT.
   app.post('/admin/disputes/resolve', zValidator('json', s.resolveDisputeSchema), async (c) => {
     const { escrow_id, admin_decision, offer_share, idempotency_key } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);
@@ -105,13 +115,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       p_idempotency_key: idempotency_key,
     });
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    return ok(c, { success: data });
+    return ok(c, { success: data?.ok, decision: data?.decision });
   });
   // --- Cron Job Routes ---
-  // These should be protected by a secret header or other mechanism.
   const cronAuth: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
     const secret = c.req.header('X-Cron-Secret');
-    const cronSecret = c.env.CRON_SECRET as string;
+    const cronSecret = c.env.CRON_SECRET;
     if (!cronSecret || secret !== cronSecret) {
       return c.json({ success: false, error: 'Unauthorized' }, 401);
     }
@@ -121,21 +130,21 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   cronApp.use('/*', cronAuth);
   cronApp.post('/auto-release', async (c) => {
     const { supabaseAdmin } = getSupabaseClients(c);
-    const { error } = await supabaseAdmin.rpc('auto_release_rpc');
+    const { data, error } = await supabaseAdmin.rpc('auto_release_rpc');
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    return ok(c, { message: 'Auto-release process completed.' });
+    return ok(c, { message: 'Auto-release process completed.', released_count: data?.released_count });
   });
   cronApp.post('/reconcile', async (c) => {
     const { supabaseAdmin } = getSupabaseClients(c);
-    const { error } = await supabaseAdmin.rpc('reconcile_rpc');
+    const { data, error } = await supabaseAdmin.rpc('reconcile_rpc');
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    return ok(c, { message: 'Reconciliation process completed.' });
+    return ok(c, { message: 'Reconciliation process completed.', anomalies: data?.anomalies });
   });
   cronApp.post('/cleanup-idempotency', async (c) => {
     const { supabaseAdmin } = getSupabaseClients(c);
-    const { error } = await supabaseAdmin.rpc('cleanup_idempotency_rpc');
+    const { data, error } = await supabaseAdmin.rpc('cleanup_idempotency_rpc');
     if (error) return bad(c, `RPC Error: ${error.message}`);
-    return ok(c, { message: 'Idempotency key cleanup completed.' });
+    return ok(c, { message: 'Idempotency key cleanup completed.', deleted_count: data?.deleted_count });
   });
   app.route('/cron', cronApp);
 }
