@@ -19,6 +19,8 @@ import { OfferDetailsPage } from '@/pages/OfferDetailsPage';
 import { MyOffersPage } from '@/pages/MyOffersPage';
 import { MyRequestsPage } from '@/pages/MyRequestsPage';
 import { MyProfilePage } from '@/pages/MyProfilePage';
+import { AdminDashboardPage } from '@/pages/AdminDashboardPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 const router = createBrowserRouter([
   {
     path: "/",
@@ -70,6 +72,24 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <MyProfilePage />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/settings",
+    element: (
+      <ProtectedRoute>
+        <SettingsPage />
+      </ProtectedRoute>
+    ),
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/admin",
+    element: (
+      <ProtectedRoute>
+        <AdminDashboardPage />
       </ProtectedRoute>
     ),
     errorElement: <RouteErrorBoundary />,

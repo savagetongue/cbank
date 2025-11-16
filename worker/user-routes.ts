@@ -149,6 +149,24 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { dispute_id: data?.dispute_id });
   });
   // --- Admin Routes ---
+  app.get('/admin/disputes/open', async (c) => {
+    const { supabaseAdmin } = getSupabaseClients(c);
+    const { data, error } = await supabaseAdmin
+      .from('disputes')
+      .select(`
+        *,
+        escrows (
+          *,
+          requests (
+            *,
+            offers ( title )
+          )
+        )
+      `)
+      .eq('status', 'open');
+    if (error) return bad(c, `Failed to fetch open disputes: ${error.message}`);
+    return ok(c, data);
+  });
   app.post('/admin/disputes/resolve', zValidator('json', s.resolveDisputeSchema), async (c) => {
     const { escrow_id, admin_decision, offer_share, idempotency_key } = c.req.valid('json');
     const { supabaseAdmin } = getSupabaseClients(c);

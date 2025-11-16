@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { User, Settings, Handshake, Package, Send } from "lucide-react";
+import { User, Settings, Handshake, Package, Send, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,8 +10,10 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { useAuthStore } from "@/stores/auth-store";
 export function AppSidebar(): JSX.Element {
   const location = useLocation();
+  const user = useAuthStore(s => s.user);
   const isActive = (path: string) => location.pathname === path;
   return (
     <Sidebar>
@@ -44,13 +46,22 @@ export function AppSidebar(): JSX.Element {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive('/settings')}>
-              <a href="#"><Settings /> <span>Settings</span></a>
+              <Link to="/settings"><Settings /> <span>Settings</span></Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {user?.isAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={isActive('/admin')}>
+                <Link to="/admin"><Shield /> <span>Admin</span></Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        {/* Footer content removed as per client request */}
+        <div className="px-2 text-xs text-muted-foreground">
+          Built with ❤️ at Cloudflare
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
