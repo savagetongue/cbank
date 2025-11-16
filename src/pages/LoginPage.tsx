@@ -49,12 +49,9 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <ThemeToggle className="absolute top-4 right-4" />
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-3xl font-semibold text-primary">ChronoBank</span>
-      </div>
-      <Card className="w-full max-w-sm shadow-lg border-accent/20">
+      <Card className="w-full max-w-sm shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">Welcome Back!</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
           <CardDescription>Sign in to access your ChronoBank account.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -86,14 +83,14 @@ export function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full btn-brand" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
             Don't have an account?{' '}
-            <Link to="/register" className="underline text-accent">
+            <Link to="/register" className="underline">
               Sign up
             </Link>
           </div>
