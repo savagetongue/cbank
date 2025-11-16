@@ -1,6 +1,6 @@
 # ChronoBank: Community Time Bank API
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/savagetongue/cbank)
 
 A Cloudflare Worker backend providing a secure, escrow-based API for a community skill exchange platform, powered by Supabase.
 
@@ -129,7 +129,7 @@ bun deploy
 
 Alternatively, deploy with one click:
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/savagetongue/cbank)
 
 ## Contributing
 
