@@ -9,6 +9,7 @@ import { Toaster, toast } from '@/components/ui/sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api-client';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Banknote } from 'lucide-react';
 const registerSchema = z.object({
   name: z.string().min(3, { message: 'Name must be at least 3 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -45,9 +46,15 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <ThemeToggle className="absolute top-4 right-4" />
-      <Card className="w-full max-w-sm shadow-lg">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-10 w-10 rounded-lg bg-[hsl(var(--brand-primary))] flex items-center justify-center">
+          <Banknote className="h-6 w-6 text-white" />
+        </div>
+        <span className="text-2xl font-semibold text-primary">ChronoBank</span>
+      </div>
+      <Card className="w-full max-w-sm shadow-lg border-accent/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Create an Account</CardTitle>
           <CardDescription>Join ChronoBank and start exchanging skills.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -92,14 +99,14 @@ export function RegisterPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="w-full btn-brand" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Creating Account...' : 'Create Account'}
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
-            <Link to="/login" className="underline">
+            <Link to="/login" className="underline text-accent">
               Sign in
             </Link>
           </div>

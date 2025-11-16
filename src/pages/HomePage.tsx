@@ -33,10 +33,10 @@ export function HomePage() {
         <div className="py-8 md:py-10 lg:py-12">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Service Offers</h1>
+              <h1 className="text-3xl font-bold text-primary">Service Offers</h1>
               <p className="text-muted-foreground">Browse and request services from the community.</p>
             </div>
-            <Button onClick={() => navigate('/create-offer')}>
+            <Button onClick={() => navigate('/create-offer')} className="btn-brand">
               <PlusCircle className="mr-2 h-4 w-4" /> Create Offer
             </Button>
           </div>
@@ -60,10 +60,10 @@ export function HomePage() {
           ) : offers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {offers.map((offer) => (
-                <Card key={offer.id} className="flex flex-col hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out">
+                <Card key={offer.id} className="flex flex-col bg-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-in-out border-accent/20">
                   <CardHeader>
-                    <CardTitle className="line-clamp-2">{offer.title}</CardTitle>
-                    <CardDescription className="flex items-center pt-1">
+                    <CardTitle className="line-clamp-2 text-primary">{offer.title}</CardTitle>
+                    <CardDescription className="flex items-center pt-1 text-accent">
                       <Clock className="mr-2 h-4 w-4" />
                       {offer.price_credits} Credits
                     </CardDescription>
@@ -72,7 +72,7 @@ export function HomePage() {
                     <p className="text-sm text-muted-foreground line-clamp-3">{offer.description}</p>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" onClick={() => navigate(`/offer/${offer.id}`)}>
+                    <Button className="w-full btn-brand" onClick={() => navigate(`/offer/${offer.id}`)}>
                       View & Request
                     </Button>
                   </CardFooter>
@@ -80,10 +80,10 @@ export function HomePage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 border-2 border-dashed rounded-lg">
-              <h2 className="text-xl font-semibold">No Offers Available</h2>
+            <div className="text-center py-16 border-2 border-dashed rounded-lg border-muted">
+              <h2 className="text-xl font-semibold text-primary">No Offers Available</h2>
               <p className="text-muted-foreground mt-2">Check back later or be the first to create one!</p>
-              <Button onClick={() => navigate('/create-offer')} className="mt-4">
+              <Button onClick={() => navigate('/create-offer')} className="mt-4 btn-brand">
                 <PlusCircle className="mr-2 h-4 w-4" /> Create First Offer
               </Button>
             </div>

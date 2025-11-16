@@ -1,6 +1,6 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
-import { Banknote, User, Settings, Handshake } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Banknote, User, Settings, Handshake, Package, Send } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,18 +16,28 @@ export function AppSidebar(): JSX.Element {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <div className="h-7 w-7 rounded-md bg-gradient-to-br from-blue-600 to-green-500 flex items-center justify-center">
-            <Banknote className="h-4 w-4 text-white" />
+        <Link to="/" className="flex items-center gap-2 px-2 py-1">
+          <div className="h-8 w-8 rounded-md bg-[hsl(var(--brand-primary))] flex items-center justify-center">
+            <Banknote className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-semibold">ChronoBank</span>
-        </div>
+          <span className="text-lg font-semibold text-primary">ChronoBank</span>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive('/')}>
-              <a href="/"><Handshake /> <span>Offers</span></a>
+              <Link to="/"><Handshake /> <span>Browse Offers</span></Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/my-offers')}>
+              <Link to="/my-offers"><Package /> <span>My Offers</span></Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive('/my-requests')}>
+              <Link to="/my-requests"><Send /> <span>My Requests</span></Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -44,7 +54,7 @@ export function AppSidebar(): JSX.Element {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-2 text-xs text-muted-foreground">
-          Built with ❤️ at Cloudflare
+          Built with ��️ at Cloudflare
         </div>
       </SidebarFooter>
     </Sidebar>

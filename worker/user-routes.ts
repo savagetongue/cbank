@@ -21,8 +21,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.route('/auth', authApp);
   // Apply auth middleware to all subsequent routes in this file
   app.use('/member/*', authMiddleware());
+  app.use('/offers/*', authMiddleware());
   app.use('/offers-create', authMiddleware());
   app.use('/requests', authMiddleware());
+  app.use('/requests/*', authMiddleware());
   app.use('/request-accept', authMiddleware());
   app.use('/escrow/*', authMiddleware());
   app.use('/admin/*', authMiddleware());
@@ -50,6 +52,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (error) return bad(c, error.message);
     return ok(c, data);
   });
+  app.get('/offers/my', async (c) => {
+    const payload = c.get('jwtPayload') as JWTPayload;
+    const { supabaseAdmin } = getSupabaseClients(c);
+    const { data, error } = await supabaseAdmin.from('offers').select('*').eq('provider_member_id', payload.sub);
+    if (error) return bad(c, error.message);
+    return ok(c, data);
+  });
   app.post('/offers-create', zValidator('json', s.createOfferSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const offerData = c.req.valid('json');
@@ -66,8 +75,36 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.get('/requests', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
     const { supabaseAdmin } = getSupabaseClients(c);
-    const { data, error } = await supabaseAdmin.from('requests').select('*').eq('member_id', payload.sub);
+    const { data, error } = await supabaseAdmin.from('requests').select('*, offers(title)').eq('member_id', payload.sub);
     if (error) return bad(c, error.message);
+    return ok(c, data);
+  });
+  app.get('/requests/incoming', async (c) => {
+    const payload = c.get('jwtPayload') as JWTPayload;
+    const { supabaseAdmin } = getSupabaseClients(c);
+    const { data, error } = await supabaseAdmin.rpc('get_incoming_requests_for_member', { p_member_id: payload.sub });
+    if (error) return bad(c, `RPC Error: ${error.message}`);
+    return ok(c, data);
+  });
+  app.post('/requests', zValidator('json', s.createRequestSchema), async (c) => {
+    const payload = c.get('jwtPayload') as JWTPayload;
+    const { offer_id } = c.req.valid('json');
+    const { supabaseAdmin } = getSupabaseClients(c);
+    const { data: offer, error: offerError } = await supabaseAdmin.from('offers').select('*').eq('id', offer_id).single();
+    if (offerError || !offer) return notFound(c, 'Offer not found.');
+    if (offer.provider_member_id === payload.sub) return bad(c, 'You cannot request your own service.');
+    const { data, error } = await supabaseAdmin
+      .from('requests')
+      .insert({
+        offer_id: offer.id,
+        member_id: payload.sub,
+        title: offer.title,
+        description: offer.description,
+        price_credits: offer.price_credits,
+      })
+      .select()
+      .single();
+    if (error) return bad(c, `Failed to create request: ${error.message}`);
     return ok(c, data);
   });
   app.post('/request-accept', zValidator('json', s.acceptRequestSchema), async (c) => {

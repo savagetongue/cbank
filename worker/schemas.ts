@@ -22,6 +22,9 @@ export const createOfferSchema = z.object({
   price_credits: z.number().int().positive(),
 });
 // Request Schema
+export const createRequestSchema = z.object({
+  offer_id: z.string().uuid(),
+});
 export const acceptRequestSchema = z.object({
   request_id: z.string().uuid(),
   idempotency_key: z.string().uuid(),

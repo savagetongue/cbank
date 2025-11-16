@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth-store';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Banknote } from 'lucide-react';
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
@@ -49,9 +50,15 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
       <ThemeToggle className="absolute top-4 right-4" />
-      <Card className="w-full max-w-sm shadow-lg">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-10 w-10 rounded-lg bg-[hsl(var(--brand-primary))] flex items-center justify-center">
+          <Banknote className="h-6 w-6 text-white" />
+        </div>
+        <span className="text-2xl font-semibold text-primary">ChronoBank</span>
+      </div>
+      <Card className="w-full max-w-sm shadow-lg border-accent/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">Welcome Back!</CardTitle>
           <CardDescription>Sign in to access your ChronoBank account.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -83,14 +90,14 @@ export function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="w-full btn-brand" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
             Don't have an account?{' '}
-            <Link to="/register" className="underline">
+            <Link to="/register" className="underline text-accent">
               Sign up
             </Link>
           </div>
