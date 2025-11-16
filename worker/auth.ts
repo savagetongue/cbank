@@ -4,9 +4,14 @@ import { zValidator } from '@hono/zod-validator';
 import { getSupabaseClients } from './supabase';
 import { registerSchema, loginSchema } from './schemas';
 import { bad, ok } from './core-utils';
-import type { JWTPayload } from '@shared/types';interface Env {id?: string | number;
+import type { JWTPayload } from '@shared/types';
+import type { Env as HonoEnv } from 'hono';
+// Use a generic Env interface that aligns with Hono's context bindings
+// This ensures c.env has the expected properties like JWT_SECRET
+interface Env extends HonoEnv {
   [key: string]: unknown;
-}const authApp = new Hono<{Bindings: Env;}>();
+}
+const authApp = new Hono<{ Bindings: Env }>();
 authApp.post('/register', zValidator('json', registerSchema), async (c) => {
   const { email, password } = c.req.valid('json');
   const { supabaseAdmin } = getSupabaseClients(c);
@@ -22,7 +27,6 @@ authApp.post('/register', zValidator('json', registerSchema), async (c) => {
   }
   return ok(c, { message: 'Registration successful. Please check your email to verify.' });
 });
-
 authApp.post('/login', zValidator('json', loginSchema), async (c) => {
   const { email, password } = c.req.valid('json');
   const { supabasePublic } = getSupabaseClients(c);
@@ -44,7 +48,7 @@ authApp.post('/login', zValidator('json', loginSchema), async (c) => {
   const payload: JWTPayload = {
     sub: data.user.id,
     role: data.user.role || 'authenticated',
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24
+    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours
   };
   const token = await sign(payload, jwtSecret);
   return ok(c, {
@@ -52,11 +56,10 @@ authApp.post('/login', zValidator('json', loginSchema), async (c) => {
     user: { id: data.user.id, email: data.user.email }
   });
 });
-
 export const authMiddleware = () => {
-  return async (c: any, next: any) => {
+  return async (c: any, next: () => Promise<void>) => {
     const jwtMiddleware = jwt({
-      secret: c.env.JWT_SECRET
+      secret: c.env.JWT_SECRET as string,
     });
     return jwtMiddleware(c, next);
   };

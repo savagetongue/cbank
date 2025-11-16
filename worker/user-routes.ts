@@ -7,11 +7,17 @@ import { authMiddleware } from './auth';
 import authApp from './auth';
 import * as s from './schemas';
 import type { JWTPayload } from '@shared/types';
+import type { MiddlewareHandler } from 'hono';
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // Mount auth routes
   app.route('/auth', authApp);
   // Apply auth middleware to all subsequent routes in this file
-  app.use('/*', authMiddleware());
+  app.use('/member/*', authMiddleware());
+  app.use('/offers-create', authMiddleware());
+  app.use('/requests', authMiddleware());
+  app.use('/request-accept', authMiddleware());
+  app.use('/escrow/*', authMiddleware());
+  app.use('/admin/*', authMiddleware());
   // --- Member Routes ---
   app.post('/member', zValidator('json', s.createMemberSchema), async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
@@ -47,9 +53,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // --- Request Routes ---
   app.get('/requests', async (c) => {
     const payload = c.get('jwtPayload') as JWTPayload;
-    const { supabasePublic } = getSupabaseClients(c);
+    const { supabaseAdmin } = getSupabaseClients(c);
     // Example: Get requests made by the user
-    const { data, error } = await supabasePublic.from('requests').select('*').eq('requester_id', payload.sub);
+    const { data, error } = await supabaseAdmin.from('requests').select('*').eq('requester_id', payload.sub);
     if (error) return bad(c, error.message);
     return ok(c, data);
   });
@@ -103,15 +109,16 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   // --- Cron Job Routes ---
   // These should be protected by a secret header or other mechanism.
-  const cronAuth = () => async (c: any, next: any) => {
+  const cronAuth: MiddlewareHandler<{ Bindings: Env }> = async (c, next) => {
     const secret = c.req.header('X-Cron-Secret');
-    if (secret !== c.env.CRON_SECRET) {
+    const cronSecret = c.env.CRON_SECRET as string;
+    if (!cronSecret || secret !== cronSecret) {
       return c.json({ success: false, error: 'Unauthorized' }, 401);
     }
     await next();
   };
   const cronApp = new Hono<{ Bindings: Env }>();
-  cronApp.use('/*', cronAuth());
+  cronApp.use('/*', cronAuth);
   cronApp.post('/auto-release', async (c) => {
     const { supabaseAdmin } = getSupabaseClients(c);
     const { error } = await supabaseAdmin.rpc('auto_release_rpc');
